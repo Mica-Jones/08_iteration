@@ -49,23 +49,31 @@ soy <- read_csv("../data/01_soybeans.csv")
 soy
 ```
   
-```{r summary}
-soyw <- soy %>%
-  mutate(krate_lbac = factor(`K rate (lbac)`),
-         trt = factor(TRT),
-         tiftonk = `Tifton K pct`,
-         midvillek = `Midville K pct`,
-         watkinsvillek = `Watkinsville K pct`,
-         maconk = `Macon K pct`
-         )
+```{r wrangling}
+soyw <- soy %>% 
+  clean_names() %>% 
+  mutate(k_rate_kgha = k_rate_lbac*0.454/0.405,
+                  k_rate_kgha = round(k_rate_kgha, 0)) %>% 
+  mutate(k_rate_kgha = factor(k_rate_kgha)) %>%
+  mutate('Tifton K PCT' = tifton_k_pct,
+         'Midville K PCT' = midville_k_pct,
+         'Watkinsville K PCT' = watkinsville_k_pct,
+         'Macon K PCT' = macon_k_pct
+         ) %>%
+  mutate(rep = case_when(
+                   plot > 100 & plot < 200 ~ 1,
+                   plot > 200 & plot < 300 ~ 2,
+                   plot > 300 & plot < 400 ~ 3,
+                   plot > 400 & plot < 500 ~ 4)
+                 ) %>%
+  mutate(rep = factor(rep)) %>%
+  select(rep, k_rate_kgha, 'Tifton K PCT', 'Midville K PCT', 'Watkinsville K PCT', 'Macon K PCT')
+
 
 soyw
+
 ```
   
-```{r summary}
-summary(soyw)
-```
-
 ## Q1 - Create a function  
 Here, you are asked to create a function.  
 The goal of this function is to create a boxplot of K leaf concentration as a function of K rates.    
@@ -76,35 +84,13 @@ The function inputs are:
   - y: the column name inside df to be plotted on the y axis  
 
 Once you create the function, make sure it works by applying it to one of the locations where K leaf concentration was collected.  
-```{r}
-soy %>% group_by(`K rate (lbac)`)
-```
-  
-```{r plot develop}
-ggplot(mapping = aes(fill = krate_lbac))+
-  # Raw data and boxplots  
-  geom_boxplot(data = soyw,
-               aes(x = krate_lbac, y = `Tifton K pct`),
-               alpha = .8) +
-  geom_jitter(data = soyw,
-               aes(x = krate_lbac, y = `Tifton K pct`),
-              shape = 21,
-              size = 3,
-              alpha = .6) +
-  labs(title = paste0(),
-       x = "K Rate (lb/A)",
-       y = "Petiolar K Concentration") +
-  scale_fill_viridis_d() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        legend.position = "none")
-```
   
 ```{r function}
-myplot <- function(df, x, y) {
+myplot <- function(df, x, y, z) {
 
 colx = {{df}} %>% pull({{x}})
 coly = {{df}} %>% pull({{y}})
+colname = colnames({{y}})
   
 ggplot(mapping = aes(fill = {{colx}}))+
   # Raw data and boxplots  
@@ -116,40 +102,36 @@ ggplot(mapping = aes(fill = {{colx}}))+
               shape = 21,
               size = 3,
               alpha = .6) +
-  labs(title = paste0(coly),
+  labs(title = paste0("Trifoliate K Concentration", " - ", z),
        x = "K Rate (lb/A)",
-       y = "Petiolar K Concentration") +
+       y = "Trifoliate K PCT") +
   scale_fill_viridis_d() +
   theme(panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
         legend.position = "none")
 }
 ```
-  
+   
 ```{r}
-myplot(soyw, krate_lbac, tiftonk)
+myplot(soyw, k_rate_kgha, 'Tifton K PCT', "Tifton")
 ```
-  
-```{r}
-soyw
 
-for (i in 5:ncol(soyw)) {
-  # Getting the name of all columns
-  colnames <- colnames(soyw)
-  # Defining the name of the variable being analyzed in a given loop step
-  varname <- colnames[i]
-  # Print a message
-  print(paste("Finished With Variable", varname))
-  
-}
-```
+
 
 ## Q2 - Iterate over locations  
-On the step above you created a function to create boxplot for one location (one column in your original data set).  
+On the step above you created a function to create boxplot for one location (one column in your original data set). 
 
 Now, you are asked to apply this function to each location in the data set.  
 For that, use one of the functions in the `map` family from the purr package.  
 When making your plots, make sure to add a title to represent which location is represented in each plot.  
+
+```{r}
+colnames(soyw)
+map(.x = soyw,
+    myplot(soyw, k_rate_kgha, , "Tifton"))
+
+```
+
 
 # Submitting your work  
 Once you have developed all the code and answers, make sure to Render this quarto file.  
